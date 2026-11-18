@@ -1,7 +1,7 @@
 {
-  "name": "whatsapp-light-chat-pro",
-  "version": "1.0.0",
-  "description": "WhatsApp-like Web Chat with Reactions, Voice, Ticks, and 200MB Support",
+  "name": "whatsapp-clone-ultimate",
+  "version": "2.0.0",
+  "description": "Ultimate WhatsApp Clone with Ticks, Info, Reactions, and Name Change",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
