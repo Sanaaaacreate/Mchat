@@ -2,388 +2,508 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hello dosto 😊🙂</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="/socket.io/socket.io.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌸Hello Dosto😊🙂 - Live Chat</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        html, body {
-            height: 100dvh;
-            width: 100vw;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.25); border-radius: 4px; }
-        .whatsapp-wallpaper {
-            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
-            background-repeat: repeat;
-        }
-        .msg-actions { display: none; }
-        .msg-bubble:hover .msg-actions, .msg-bubble:active .msg-actions { display: flex; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #efeae2; color: #111b21; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        
+        /* Login Screen */
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f0f2f5; display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .login-box { background: #ffffff; padding: 40px; border-radius: 12px; text-align: center; width: 350px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border: 1px solid #d1d7db; }
+        .login-box h2 { color: #00a884; margin-bottom: 20px; }
+        .login-box input { width: 100%; padding: 12px; margin-bottom: 20px; background: #f0f2f5; border: 1px solid #d1d7db; border-radius: 6px; color: #111b21; font-size: 16px; outline: none; }
+        .login-box button { width: 100%; padding: 12px; background: #00a884; border: none; border-radius: 6px; color: #fff; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .login-box button:hover { background: #029374; }
+
+        /* Chat Container (Fixed Layout) */
+        .chat-container { width: 100%; max-width: 900px; height: 100%; background: #efeae2; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+        @media(min-width: 768px) { .chat-container { height: 92vh; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 1px solid #d1d7db; } }
+
+        /* Sticky Header */
+        .chat-header { background: #f0f2f5; padding: 10px 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #d1d7db; z-index: 10; flex-shrink: 0; }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .group-avatar { width: 40px; height: 40px; background: #00a884; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #fff; }
+        .group-info h3 { font-size: 16px; font-weight: 600; color: #111b21; }
+        .group-info p { font-size: 12px; color: #667781; }
+        .header-right { position: relative; }
+        .menu-btn { background: none; border: none; color: #54656f; font-size: 20px; cursor: pointer; padding: 8px; border-radius: 50%; }
+        .menu-btn:hover { background: rgba(0,0,0,0.05); }
+
+        /* Dropdown Menu */
+        .dropdown-menu { display: none; position: absolute; right: 0; top: 45px; background: #ffffff; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); width: 210px; z-index: 100; border: 1px solid #d1d7db; }
+        .dropdown-menu.active { display: block; }
+        .dropdown-item { padding: 12px 16px; font-size: 14px; color: #111b21; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f0f2f5; }
+        .dropdown-item:hover { background: #f5f6f6; }
+
+        /* Scrollable Messages Area */
+        .chat-messages { flex: 1; background: #efeae2 url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png') repeat; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .message { max-width: 75%; padding: 8px 12px 4px 12px; border-radius: 7.5px; position: relative; word-wrap: break-word; font-size: 14.5px; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); }
+        .message.incoming { background: #ffffff; align-self: flex-start; border-top-left-radius: 0; color: #111b21; }
+        .message.outgoing { background: #d9fdd3; align-self: flex-end; border-top-right-radius: 0; color: #111b21; }
+        .sender-name { font-size: 12px; font-weight: bold; color: #008069; margin-bottom: 2px; }
+        .message-footer { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 2px; }
+        .message-time { font-size: 10px; color: #667781; }
+        .tick-mark { font-size: 11px; color: #53bdeb; } /* Blue/Grey Ticks */
+
+        /* Reactions Popup & Display */
+        .reaction-trigger { position: absolute; right: 5px; top: 2px; background: none; border: none; color: #8696a0; cursor: pointer; font-size: 14px; opacity: 0; transition: 0.2s; }
+        .message:hover .reaction-trigger { opacity: 1; }
+        .reaction-picker { display: none; position: absolute; right: 0; top: -35px; background: #fff; border: 1px solid #d1d7db; border-radius: 20px; padding: 4px 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 50; gap: 6px; align-items: center; }
+        .reaction-picker.active { display: flex; }
+        .reaction-picker span { cursor: pointer; font-size: 16px; transition: 0.1s; }
+        .reaction-picker span:hover { transform: scale(1.3); }
+        .msg-reactions { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+        .badge-reaction { background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 10px; font-size: 12px; }
+
+        /* Media / Files */
+        .msg-img, .msg-video { width: 100%; max-height: 280px; border-radius: 6px; cursor: pointer; object-fit: cover; margin-top: 4px; }
+        .msg-audio { width: 240px; margin-top: 4px; }
+        .file-box { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 6px; margin-top: 4px; border: 1px solid rgba(0,0,0,0.1); }
+        .file-box i { font-size: 26px; color: #00a884; }
+        .download-btn { background: #00a884; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 13px; cursor: pointer; text-decoration: none; font-weight: bold; }
+
+        /* Progress Loader with % */
+        #upload-loader { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.85); z-index: 500; justify-content: center; align-items: center; flex-direction: column; font-weight: bold; color: #00a884; font-size: 18px; }
+        .progress-bar-container { width: 250px; background: #d1d7db; border-radius: 10px; height: 10px; margin-top: 15px; overflow: hidden; }
+        .progress-bar-fill { width: 0%; height: 100%; background: #00a884; transition: width 0.1s; }
+
+        /* Fixed Input Area with Multiline Textarea */
+        .chat-input-area { background: #f0f2f5; padding: 10px 15px; display: flex; align-items: flex-end; gap: 10px; border-top: 1px solid #d1d7db; flex-shrink: 0; z-index: 10; }
+        .chat-input-area textarea { flex: 1; background: #ffffff; border: 1px solid #d1d7db; border-radius: 8px; padding: 10px 15px; color: #111b21; font-size: 15px; outline: none; resize: none; max-height: 120px; min-height: 42px; }
+        .icon-action-btn { background: none; border: none; color: #54656f; font-size: 20px; cursor: pointer; padding: 8px 0; }
+        .icon-action-btn:hover { color: #111b21; }
+        .send-btn { background: #00a884; border: none; color: #fff; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; flex-shrink: 0; margin-bottom: 2px; }
+        .send-btn:hover { background: #029374; }
+
+        /* Typing indicator */
+        .typing-indicator { font-size: 12px; color: #008069; padding: 2px 15px; font-style: italic; background: #efeae2; flex-shrink: 0; }
+
+        /* Modals */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 200; }
+        .modal-content { background: #ffffff; padding: 25px; border-radius: 10px; width: 320px; text-align: center; border: 1px solid #d1d7db; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .modal-content h3 { margin-bottom: 15px; color: #111b21; }
+        .modal-content input { width: 100%; padding: 10px; background: #f0f2f5; border: 1px solid #d1d7db; border-radius: 6px; color: #111b21; margin-bottom: 15px; outline: none; }
+        .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; }
+        .modal-buttons button { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-cancel { background: #e9edef; color: #3b4a54; }
+        .btn-ok { background: #00a884; color: #fff; }
+
+        /* Members List */
+        .members-list { max-height: 200px; overflow-y: auto; text-align: left; margin-bottom: 15px; background: #f0f2f5; padding: 10px; border-radius: 6px; border: 1px solid #d1d7db; }
+        .member-item { padding: 6px 0; border-bottom: 1px solid #e9edef; font-size: 14px; display: flex; align-items: center; gap: 8px; color: #111b21; }
+        .member-item i { color: #00a884; font-size: 10px; }
+
+        /* Full Media Modal */
+        #media-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 300; }
+        #media-modal img { max-width: 90%; max-height: 90%; border-radius: 8px; }
+        .close-media { position: absolute; top: 20px; right: 30px; color: #fff; font-size: 30px; cursor: pointer; }
     </style>
 </head>
-<body class="bg-[#efeae2] flex justify-center items-center">
+<body>
 
-    <div class="w-full max-w-2xl h-full bg-[#efeae2] flex flex-col relative shadow-2xl overflow-hidden">
-        
-        <!-- Header -->
-        <div class="bg-[#00a884] text-white px-3 py-2.5 flex items-center justify-between shadow-md z-30 shrink-0">
-            <div class="flex items-center space-x-2.5 cursor-pointer overflow-hidden" onclick="editGroupName()">
-                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl shrink-0">👥</div>
-                <div class="truncate">
-                    <div class="flex items-center space-x-1">
-                        <h1 id="groupTitle" class="font-bold text-base truncate">Hello dosto 😊🙂</h1>
-                        <span class="text-xs text-yellow-200">✏️</span>
-                    </div>
-                    <p class="text-[11px] text-green-100 truncate">लाइव चैट कनेक्टेड (24 Hrs Auto-Delete)</p>
-                </div>
-            </div>
-            
-            <div class="flex items-center space-x-1 shrink-0 relative">
-                <button onclick="toggleSearchBox()" class="p-2 hover:bg-black/10 rounded-full transition">🔍</button>
-                <button onclick="toggleThreeDotMenu()" class="p-2 hover:bg-black/10 rounded-full transition text-lg font-bold px-2.5">⋮</button>
-
-                <div id="threeDotDropdown" class="hidden absolute right-0 top-12 bg-white text-gray-800 shadow-2xl rounded-xl py-1.5 w-56 z-50 border border-gray-200 text-sm">
-                    <button onclick="changeMyName(); toggleThreeDotMenu();" class="w-full text-left px-4 py-2.5 hover:bg-gray-100 flex items-center space-x-2.5"><span>👤</span><span>अपना नाम बदलें</span></button>
-                    <button onclick="editGroupName(); toggleThreeDotMenu();" class="w-full text-left px-4 py-2.5 hover:bg-gray-100 flex items-center space-x-2.5"><span>✏️</span><span>ग्रुप का नाम बदलें</span></button>
-                    <button onclick="clearChatForMe(); toggleThreeDotMenu();" class="w-full text-left px-4 py-2.5 hover:bg-gray-100 flex items-center space-x-2.5 text-red-600 border-t"><span>🧹</span><span>स्क्रीन साफ करें</span></button>
-                </div>
-            </div>
+    <!-- Upload Progress Loader with % -->
+    <div id="upload-loader">
+        <i class="fa-solid fa-spinner fa-spin" style="font-size: 40px; margin-bottom: 10px;"></i>
+        <span id="upload-status-text">फाइल अपलोड हो रही है: 0%</span>
+        <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="progress-bar-fill"></div>
         </div>
-
-        <!-- Search Bar -->
-        <div id="searchBarContainer" class="hidden bg-white px-3 py-2 border-b flex items-center space-x-2 z-20 shrink-0">
-            <input type="text" id="searchInput" placeholder="संदेश खोजें..." oninput="searchMessages(this.value)" class="w-full bg-gray-100 text-gray-800 text-xs px-3 py-2 rounded-lg focus:outline-none">
-            <button onclick="toggleSearchBox()" class="text-gray-500 font-bold px-2">✖</button>
-        </div>
-
-        <!-- Messages Area -->
-        <div id="messagesContainer" class="flex-1 p-3 overflow-y-auto space-y-2.5 flex flex-col whatsapp-wallpaper">
-            <div class="bg-[#fff3c4] text-gray-800 self-center text-[11px] px-3 py-1 rounded-lg shadow-sm text-center max-w-[92%]">
-                ✨ स्वागत है! रिएक्शन, ब्लू टिक, मीडिया और 24 घंटे का ऑटो-डिलीट चालू है।
-            </div>
-        </div>
-
-        <!-- Reply Preview -->
-        <div id="replyPreview" class="hidden bg-white border-l-4 border-[#00a884] px-3 py-1.5 flex justify-between items-center text-xs shrink-0 shadow-sm">
-            <div class="truncate">
-                <span id="replySender" class="font-bold text-[#00a884]"></span>
-                <p id="replyText" class="text-gray-600 truncate"></p>
-            </div>
-            <button onclick="cancelReply()" class="text-gray-400 font-bold ml-2 p-1">✖</button>
-        </div>
-
-        <!-- Input Bar -->
-        <div class="bg-[#f0f2f5] p-2 flex items-end space-x-1.5 z-20 border-t border-gray-200 shrink-0">
-            <label class="cursor-pointer text-gray-600 hover:text-[#00a884] p-2.5 transition text-xl shrink-0" title="फोटो या वीडियो">
-                📎
-                <input type="file" id="mediaInput" accept="*/*" class="hidden" onchange="sendMediaFile(event)">
-            </label>
-
-            <textarea id="messageInput" rows="1" placeholder="संदेश लिखें..." oninput="autoResizeTextarea(this)" class="flex-1 bg-white text-gray-800 rounded-2xl px-3.5 py-2.5 text-sm focus:outline-none border border-gray-300 resize-none max-h-28 overflow-y-auto leading-snug"></textarea>
-            
-            <button onclick="sendMessage()" class="bg-[#00a884] hover:bg-[#008069] text-white w-11 h-11 rounded-full flex items-center justify-center shadow-md transition shrink-0 text-lg">
-                ➤
-            </button>
-        </div>
-
-        <!-- Name Modal -->
-        <div id="nameOverlayModal" class="hidden absolute inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-5 z-50">
-            <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm text-center">
-                <div class="text-4xl mb-2">👋</div>
-                <h2 class="text-xl font-bold text-[#00a884] mb-1">Hello dosto 😊🙂</h2>
-                <p class="text-xs text-gray-500 mb-4">चैट में शामिल होने के लिए अपना नाम लिखें:</p>
-                <input type="text" id="userNameInput" placeholder="अपना नाम लिखें..." class="w-full bg-gray-50 border border-gray-300 p-3 rounded-xl text-sm mb-4 focus:outline-none focus:border-[#00a884] text-gray-800">
-                <button onclick="saveNameAndJoin()" class="w-full bg-[#00a884] hover:bg-[#008069] text-white font-bold py-3 rounded-xl shadow-lg text-sm">
-                    चैट शुरू करें 🚀
-                </button>
-            </div>
-        </div>
-
-        <!-- Info & Read Receipt Modal -->
-        <div id="infoModal" class="hidden absolute inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-            <div class="bg-white text-gray-800 rounded-2xl max-w-sm w-full p-5 shadow-2xl">
-                <div class="flex justify-between items-center border-b pb-2 mb-3">
-                    <h3 id="modalTitle" class="font-bold text-base text-[#00a884]">विवरण</h3>
-                    <button onclick="closeInfoModal()" class="text-gray-500 font-bold p-1">✖</button>
-                </div>
-                <div id="modalBody" class="text-xs space-y-2 max-h-60 overflow-y-auto"></div>
-            </div>
-        </div>
-
     </div>
 
+    <!-- Login Screen -->
+    <div id="login-screen">
+        <div class="login-box">
+            <h2>🌸 Hello Dosto 🌸</h2>
+            <p style="color: #667781; font-size: 14px; margin-bottom: 20px;">चैट में शामिल होने के लिए अपना नाम दर्ज करें</p>
+            <input type="text" id="username-input" placeholder="अपना नाम लिखें..." autocomplete="off">
+            <button onclick="joinChat()">चैट में जाएं</button>
+        </div>
+    </div>
+
+    <!-- Main Chat Interface -->
+    <div class="chat-container" id="chat-container" style="display: none;">
+        <!-- Fixed Header -->
+        <div class="chat-header">
+            <div class="header-left">
+                <div class="group-avatar"><i class="fa-solid fa-users"></i></div>
+                <div class="group-info">
+                    <h3 id="group-title-display">🌸Hello Dosto😊🙂</h3>
+                    <p id="online-count-text">ऑनलाइन मेंबर्स दिख रहे हैं...</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="menu-btn" onclick="toggleMenu()"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                <div class="dropdown-menu" id="dropdown-menu">
+                    <div class="dropdown-item" onclick="openMembersModal()"><i class="fa-solid fa-user-group"></i> ऑनलाइन मेंबर्स देखें</div>
+                    <div class="dropdown-item" onclick="openRenameModal()"><i class="fa-solid fa-pen"></i> ग्रुप का नाम बदलें</div>
+                    <div class="dropdown-item" onclick="clearMyChat()"><i class="fa-solid fa-trash"></i> चैट हिस्ट्री साफ करें</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scrollable Messages Area -->
+        <div class="chat-messages" id="chat-messages"></div>
+
+        <!-- Typing Indicator Area -->
+        <div class="typing-indicator" id="typing-indicator"></div>
+
+        <!-- Fixed Input Area with Multiline Support -->
+        <div class="chat-input-area">
+            <label for="media-file-input" class="icon-action-btn" title="फोटो, वीडियो या डॉक्यूमेंट भेजें (200MB)"><i class="fa-solid fa-paperclip"></i></label>
+            <input type="file" id="media-file-input" style="display: none;" onchange="sendFile(event)">
+            
+            <button class="icon-action-btn" id="mic-btn" onclick="toggleVoiceRecording()" title="वॉइस नोट रिकॉर्ड करें"><i class="fa-solid fa-microphone" id="mic-icon"></i></button>
+            
+            <textarea id="message-input" placeholder="संदेश टाइप करें..." rows="1" oninput="handleTyping()" onkeydown="handleKeyDown(event)"></textarea>
+            
+            <button class="send-btn" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal" id="members-modal">
+        <div class="modal-content">
+            <h3>ऑनलाइन मेंबर्स</h3>
+            <div class="members-list" id="members-list-box"></div>
+            <div class="modal-buttons">
+                <button class="btn-ok" onclick="closeMembersModal()">बंद करें</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="rename-modal">
+        <div class="modal-content">
+            <h3>ग्रुप का नया नाम रखें</h3>
+            <input type="text" id="new-group-name-input" placeholder="नया नाम...">
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="closeRenameModal()">रद्द करें</button>
+                <button class="btn-ok" onclick="updateGroupName()">बदलें</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="media-modal" onclick="closeMediaModal()">
+        <span class="close-media">&times;</span>
+        <img id="modal-img-tag" src="">
+    </div>
+
+    <!-- Socket.io Script -->
+    <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        let myName = localStorage.getItem('wa_device_username') || '';
-        let groupName = 'Hello dosto 😊🙂';
-        let replyToMsg = null;
-        let allMessagesCache = {};
+        let myName = localStorage.getItem('chat_username') || "";
+        let typingTimeout;
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
 
         window.onload = function() {
-            if (!myName) {
-                document.getElementById('nameOverlayModal').classList.remove('hidden');
+            if (myName) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('chat-container').style.display = 'flex';
+                socket.emit('join-chat', myName);
             }
         };
 
-        function saveNameAndJoin() {
-            const name = document.getElementById('userNameInput').value.trim();
-            if (!name) { alert("कृपया नाम लिखें!"); return; }
-            myName = name;
-            localStorage.setItem('wa_device_username', myName);
-            document.getElementById('nameOverlayModal').classList.add('hidden');
-            location.reload();
+        function joinChat() {
+            const input = document.getElementById('username-input').value.trim();
+            if (!input) {
+                alert("कृपया अपना नाम दर्ज करें!");
+                return;
+            }
+            myName = input;
+            localStorage.setItem('chat_username', myName);
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('chat-container').style.display = 'flex';
+            socket.emit('join-chat', myName);
         }
 
-        function changeMyName() {
-            const newName = prompt("अपना नया नाम लिखें:", myName);
-            if (newName && newName.trim() !== "") {
-                myName = newName.trim();
-                localStorage.setItem('wa_device_username', myName);
+        function toggleMenu() {
+            document.getElementById('dropdown-menu').classList.toggle('active');
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.matches('.menu-btn') && !event.target.matches('.fa-ellipsis-vertical')) {
+                const dropdown = document.getElementById('dropdown-menu');
+                if (dropdown.classList.contains('active')) dropdown.classList.remove('active');
             }
         }
 
-        socket.on('load_history', (messages) => {
-            messages.forEach(msg => {
-                allMessagesCache[msg._id] = msg;
-                renderMessage(msg);
-                if (msg.sender !== myName) {
-                    socket.emit('mark_read', { msgId: msg._id, reader: myName });
-                }
-            });
-        });
-
-        socket.on('receive_message', (msg) => {
-            allMessagesCache[msg._id] = msg;
-            renderMessage(msg);
-            if (msg.sender !== myName) {
-                socket.emit('mark_read', { msgId: msg._id, reader: myName });
+        // Multiline Enter Key Handling
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
             }
+        }
+
+        // Typing Status
+        function handleTyping() {
+            socket.emit('typing', myName);
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                socket.emit('stop-typing');
+            }, 1000);
+        }
+
+        socket.on('typing', (name) => {
+            document.getElementById('typing-indicator').innerText = `${name} टाइप कर रहे हैं...`;
         });
 
-        socket.on('update_read_receipt', ({ msgId, readBy }) => {
-            if (allMessagesCache[msgId]) allMessagesCache[msgId].readBy = readBy;
-            const tick = document.getElementById(`tick-${msgId}`);
-            if (tick && readBy.length > 0) {
-                tick.innerText = '✓✓';
-                tick.className = 'text-blue-500 font-bold ml-1';
-            }
-        });
-
-        socket.on('update_reactions', ({ msgId, reactions }) => {
-            if (allMessagesCache[msgId]) allMessagesCache[msgId].reactions = reactions;
-            renderReactionsUI(msgId, reactions);
-        });
-
-        socket.on('group_name_updated', (name) => {
-            groupName = name;
-            document.getElementById('groupTitle').innerText = groupName;
-        });
-
-        socket.on('message_deleted', (msgId) => {
-            const el = document.getElementById(msgId);
-            if (el) {
-                const body = el.querySelector('.msg-body');
-                if (body) body.innerHTML = `<span class="italic text-gray-400 text-xs">🚫 यह संदेश डिलीट कर दिया गया है</span>`;
-            }
+        socket.on('stop-typing', () => {
+            document.getElementById('typing-indicator').innerText = '';
         });
 
         function sendMessage() {
-            if (!myName) { document.getElementById('nameOverlayModal').classList.remove('hidden'); return; }
-            const input = document.getElementById('messageInput');
+            const input = document.getElementById('message-input');
             const text = input.value.trim();
             if (!text) return;
 
-            socket.emit('send_message', { groupName, sender: myName, type: 'text', text, replyTo: replyToMsg });
+            const msgData = {
+                id: 'msg_' + Date.now() + Math.random(),
+                name: myName,
+                type: 'text',
+                content: text,
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                reactions: {}
+            };
+            socket.emit('chat-message', msgData);
             input.value = '';
-            input.style.height = 'auto';
-            cancelReply();
+            socket.emit('stop-typing');
         }
 
-        function sendMediaFile(event) {
-            if (!myName) { document.getElementById('nameOverlayModal').classList.remove('hidden'); return; }
+        // 200MB File & Media Support with Simulated Progress Percentage
+        function sendFile(event) {
             const file = event.target.files[0];
             if (!file) return;
 
+            if (file.size > 200 * 1024 * 1024) {
+                alert("फाइल का साइज़ 200MB से ज्यादा है!");
+                return;
+            }
+
+            const loader = document.getElementById('upload-loader');
+            const fill = document.getElementById('progress-bar-fill');
+            const statusText = document.getElementById('upload-status-text');
+            loader.style.display = 'flex';
+            
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 10;
+                if (progress > 90) progress = 90;
+                fill.style.width = progress + '%';
+                statusText.innerText = `फाइल अपलोड हो रही है: ${progress}%`;
+            }, 150);
+
             const reader = new FileReader();
             reader.onload = function(e) {
-                socket.emit('send_message', {
-                    groupName, sender: myName, type: 'media',
-                    mediaUrl: e.target.result, fileName: file.name,
-                    fileType: file.type || 'application/octet-stream', replyTo: replyToMsg
-                });
+                clearInterval(interval);
+                fill.style.width = '100%';
+                statusText.innerText = `अपलोड पूर्ण! 100%`;
+
+                setTimeout(() => {
+                    loader.style.display = 'none';
+                    fill.style.width = '0%';
+
+                    let fileType = 'file';
+                    if (file.type.startsWith('image/')) fileType = 'image';
+                    else if (file.type.startsWith('video/')) fileType = 'video';
+                    else if (file.type.startsWith('audio/')) fileType = 'audio';
+
+                    const msgData = {
+                        id: 'msg_' + Date.now() + Math.random(),
+                        name: myName,
+                        type: fileType,
+                        content: e.target.result,
+                        fileName: file.name,
+                        time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                        reactions: {}
+                    };
+                    socket.emit('chat-message', msgData);
+                    event.target.value = '';
+                }, 500);
             };
             reader.readAsDataURL(file);
-            event.target.value = '';
         }
 
-        function renderMessage(msg) {
-            const container = document.getElementById('messagesContainer');
-            if (document.getElementById(msg._id)) return;
-
-            const isSent = msg.sender === myName;
-            const wrapper = document.createElement('div');
-            wrapper.id = msg._id;
-            wrapper.className = `msg-bubble relative max-w-[82%] px-3 py-2 rounded-2xl text-sm shadow-sm break-words mb-1 ${
-                isSent ? 'bg-[#dcf8c6] text-gray-900 self-end rounded-tr-none' : 'bg-white text-gray-900 self-start rounded-tl-none border border-gray-200'
-            }`;
-
-            let html = '';
-            if (!isSent) html += `<div class="text-[11px] font-bold text-[#075e54] mb-0.5">${msg.sender}</div>`;
-
-            if (msg.replyTo) {
-                html += `<div class="bg-black/5 border-l-3 border-[#00a884] p-1.5 rounded text-xs mb-1.5 text-gray-600">
-                            <div class="font-bold text-[10px] text-[#00a884]">${msg.replyTo.sender}</div>
-                            <div class="truncate">${msg.replyTo.text}</div>
-                         </div>`;
+        // Voice Note Recording
+        function toggleVoiceRecording() {
+            const micIcon = document.getElementById('mic-icon');
+            if (!isRecording) {
+                navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const msgData = {
+                                id: 'msg_' + Date.now() + Math.random(),
+                                name: myName,
+                                type: 'audio',
+                                content: e.target.result,
+                                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                                reactions: {}
+                            };
+                            socket.emit('chat-message', msgData);
+                        };
+                        reader.readAsDataURL(audioBlob);
+                    };
+                    mediaRecorder.start();
+                    isRecording = true;
+                    micIcon.style.color = 'red';
+                    alert("वॉइस रिकॉर्डिंग शुरू हो गई है! रोकने के लिए दोबारा माइक पर क्लिक करें।");
+                }).catch(err => {
+                    alert("माइक्रोफ़ोन की अनुमति नहीं मिली!");
+                });
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                micIcon.style.color = '#54656f';
             }
+        }
 
-            if (msg.type === 'text') {
-                html += `<div class="msg-body leading-relaxed whitespace-pre-wrap">${msg.text.replace(/\n/g, '<br>')}</div>`;
-            } else if (msg.type === 'media') {
-                let mediaHtml = '';
-                if (msg.fileType.startsWith('video/')) {
-                    mediaHtml = `<video src="${msg.mediaUrl}" controls class="w-full rounded-xl max-h-60 bg-black object-cover mb-1"></video>`;
-                } else if (msg.fileType.startsWith('image/')) {
-                    mediaHtml = `<img src="${msg.mediaUrl}" class="w-full rounded-xl max-h-60 object-cover mb-1">`;
-                } else {
-                    mediaHtml = `<div class="text-xs font-semibold text-gray-700 bg-black/5 p-2 rounded-lg mb-1">📄 ${msg.fileName}</div>`;
+        // Socket Events
+        socket.on('load-history', (history) => {
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.innerHTML = '';
+            history.forEach(data => appendMessage(data));
+        });
+
+        socket.on('chat-message', (data) => {
+            appendMessage(data);
+        });
+
+        socket.on('update-reaction', ({ messageId, reactions }) => {
+            const msgEl = document.getElementById(messageId);
+            if (msgEl) {
+                let rContainer = msgEl.querySelector('.msg-reactions');
+                if (!rContainer) {
+                    rContainer = document.createElement('div');
+                    rContainer.className = 'msg-reactions';
+                    msgEl.appendChild(rContainer);
                 }
-                html += `<div class="msg-body">${mediaHtml}<a href="${msg.mediaUrl}" download="${msg.fileName}" class="text-[11px] text-blue-600 font-bold underline">डाउनलोड ⬇️</a></div>`;
+                rContainer.innerHTML = '';
+                for (let user in reactions) {
+                    const span = document.createElement('span');
+                    span.className = 'badge-reaction';
+                    span.innerText = `${reactions[user]}`;
+                    rContainer.appendChild(span);
+                }
             }
+        });
 
-            html += `<div id="reactions-container-${msg._id}" class="flex flex-wrap gap-1 mt-1 cursor-pointer" onclick="showReactionDetails('${msg._id}')"></div>`;
+        socket.on('update-group-name', (name) => {
+            document.getElementById('group-title-display').innerText = name;
+        });
 
-            const hasRead = msg.readBy && msg.readBy.length > 0;
-            const tickColor = hasRead ? 'text-blue-500 font-bold' : 'text-gray-400';
-            const tickHtml = isSent ? `<span id="tick-${msg._id}" class="${tickColor} ml-1">✓✓</span>` : '';
-            html += `<div class="flex justify-end items-center space-x-1 mt-1 text-[10px] text-gray-500">
-                        <span onclick="showMessageInfo('${msg._id}')" class="cursor-pointer">${new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                        ${tickHtml}
-                     </div>`;
+        socket.on('update-users-list', (users) => {
+            document.getElementById('online-count-text').innerText = `${users.length} मेंबर्स ऑनलाइन`;
+        });
 
-            const safeText = msg.type === 'text' ? msg.text.replace(/'/g, "\\'").replace(/\n/g, " ") : msg.fileName;
-            html += `<div class="msg-actions absolute -top-9 ${isSent ? 'right-0' : 'left-0'} bg-white shadow-xl rounded-full px-2 py-1 space-x-1.5 text-xs border border-gray-200 z-20 items-center">
-                        <button onclick="addReaction('${msg._id}', '👍')">👍</button>
-                        <button onclick="addReaction('${msg._id}', '❤️')">❤️</button>
-                        <button onclick="addReaction('${msg._id}', '😂')">😂</button>
-                        <button onclick="openCustomEmojiPicker('${msg._id}')" class="bg-gray-100 hover:bg-gray-200 px-1.5 rounded-full font-bold" title="कस्टम इमोजी (+)">➕</button>
-                        <button onclick="setReply('${msg.sender}', '${safeText}')">↩️</button>
-                        ${isSent ? `<button onclick="deleteForEveryone('${msg._id}')" class="text-red-500 font-bold">❌</button>` : ''}
-                     </div>`;
+        function appendMessage(data) {
+            const chatMessages = document.getElementById('chat-messages');
+            const isOutgoing = data.name === myName;
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${isOutgoing ? 'outgoing' : 'incoming'}`;
+            msgDiv.id = data.id;
 
-            wrapper.innerHTML = html;
-            container.appendChild(wrapper);
-            container.scrollTop = container.scrollHeight;
+            let contentHTML = `<div class="sender-name">${data.name}</div>`;
+            
+            // Reaction Picker Trigger Button (+)
+            contentHTML += `<button class="reaction-trigger" onclick="toggleReactionPicker('${data.id}')"><i class="fa-solid fa-face-smile"></i></button>`;
+            contentHTML += `<div class="reaction-picker" id="picker_${data.id}">
+                <span onclick="sendReaction('${data.id}', '❤️')">❤️</span>
+                <span onclick="sendReaction('${data.id}', '😂')">😂</span>
+                <span onclick="sendReaction('${data.id}', '👍')">👍</span>
+                <span onclick="sendReaction('${data.id}', '😮')">😮</span>
+                <span onclick="sendReaction('${data.id}', '😢')">😢</span>
+            </div>`;
 
-            if (msg.reactions && msg.reactions.length > 0) {
-                renderReactionsUI(msg._id, msg.reactions);
-            }
-        }
-
-        function openCustomEmojiPicker(msgId) {
-            const customEmoji = prompt("कोई भी इमोजी टाइप करें (जैसे 🔥, 🎉, 🤩):", "🔥");
-            if (customEmoji && customEmoji.trim() !== "") {
-                addReaction(msgId, customEmoji.trim());
-            }
-        }
-
-        function addReaction(msgId, emoji) {
-            if (!myName) { document.getElementById('nameOverlayModal').classList.remove('hidden'); return; }
-            socket.emit('add_reaction', { msgId, user: myName, emoji });
-        }
-
-        function renderReactionsUI(msgId, reactions) {
-            const container = document.getElementById(`reactions-container-${msgId}`);
-            if (!container) return;
-            if (!reactions || reactions.length === 0) { container.innerHTML = ''; return; }
-
-            let counts = {};
-            reactions.forEach(r => { counts[r.emoji] = (counts[r.emoji] || 0) + 1; });
-
-            let html = '';
-            for (let emoji in counts) {
-                html += `<span class="bg-white/80 border border-gray-300 rounded-full px-2 py-0.5 text-xs shadow-sm flex items-center space-x-1">
-                            <span>${emoji}</span>
-                            <span class="text-[10px] font-bold text-gray-600">${counts[emoji]}</span>
-                         </span>`;
-            }
-            container.innerHTML = html;
-        }
-
-        function showMessageInfo(msgId) {
-            const msg = allMessagesCache[msgId];
-            if (!msg) return;
-
-            document.getElementById('modalTitle').innerText = "संदेश की जानकारी";
-            let bodyHtml = `<div class="mb-3"><p class="font-bold text-[#00a884] mb-1">✓✓ इन्होंने पढ़ा:</p>`;
-            if (!msg.readBy || msg.readBy.length === 0) {
-                bodyHtml += `<p class="text-gray-500 italic">अभी किसी ने नहीं पढ़ा।</p>`;
+            if (data.type === 'text') {
+                contentHTML += `<div style="white-space: pre-wrap; word-break: break-word;">${escapeHtml(data.content)}</div>`;
+            } else if (data.type === 'image') {
+                contentHTML += `<img src="${data.content}" class="msg-img" onclick="openMediaModal('${data.content}')">`;
+            } else if (data.type === 'video') {
+                contentHTML += `<video src="${data.content}" class="msg-video" controls></video>`;
+            } else if (data.type === 'audio') {
+                contentHTML += `<audio src="${data.content}" class="msg-audio" controls></audio>`;
             } else {
-                msg.readBy.forEach(r => {
-                    bodyHtml += `<div class="flex justify-between border-b py-1"><span>👤 ${r.reader}</span><span class="text-gray-500">${r.time}</span></div>`;
-                });
+                contentHTML += `<div class="file-box">
+                    <i class="fa-solid fa-file-arrow-down"></i>
+                    <div style="flex:1; font-size:13px; word-break:break-all; color:#111b21;">${data.fileName}</div>
+                    <a href="${data.content}" download="${data.fileName}" class="download-btn">डाउनलोड</a>
+                </div>`;
             }
-            bodyHtml += `</div>`;
 
-            bodyHtml += `<div><p class="font-bold text-blue-600 mb-1">💬 रिएक्शन विवरण:</p>`;
-            if (!msg.reactions || msg.reactions.length === 0) {
-                bodyHtml += `<p class="text-gray-500 italic">कोई रिएक्शन नहीं है।</p>`;
-            } else {
-                msg.reactions.forEach(rc => {
-                    bodyHtml += `<div class="flex justify-between border-b py-1"><span>👤 ${rc.user}</span><span class="text-base">${rc.emoji}</span></div>`;
-                });
+            // Reactions badges if already present
+            if (data.reactions && Object.keys(data.reactions).length > 0) {
+                contentHTML += `<div class="msg-reactions">`;
+                for (let user in data.reactions) {
+                    contentHTML += `<span class="badge-reaction">${data.reactions[user]}</span>`;
+                }
+                contentHTML += `</div>`;
             }
-            bodyHtml += `</div>`;
 
-            document.getElementById('modalBody').innerHTML = bodyHtml;
-            document.getElementById('infoModal').classList.remove('hidden');
+            // Footer with Time and Double Tick (✓✓)
+            contentHTML += `<div class="message-footer">
+                <span class="message-time">${data.time}</span>
+                <span class="tick-mark"><i class="fa-solid fa-check-double"></i></span>
+            </div>`;
+
+            msgDiv.innerHTML = contentHTML;
+            chatMessages.appendChild(msgDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        function showReactionDetails(msgId) { showMessageInfo(msgId); }
-        function closeInfoModal() { document.getElementById('infoModal').classList.add('hidden'); }
+        function toggleReactionPicker(msgId) {
+            const picker = document.getElementById(`picker_${msgId}`);
+            picker.classList.toggle('active');
+        }
 
-        function deleteForEveryone(msgId) {
-            if (confirm("क्या आप इस संदेश को सबके लिए डिलीट करना चाहते हैं?")) {
-                socket.emit('message_deleted', msgId); // Note: server listens to delete_message, emitted via server side handling
-                socket.emit('delete_message', msgId);
+        function sendReaction(msgId, reaction) {
+            socket.emit('add-reaction', { messageId: msgId, reaction: reaction, name: myName });
+            document.getElementById(`picker_${msgId}`).classList.remove('active');
+        }
+
+        function clearMyChat() {
+            document.getElementById('chat-messages').innerHTML = '';
+            alert("आपकी स्क्रीन से चैट साफ़ कर दी गई है!");
+            toggleMenu();
+        }
+
+        function openMembersModal() {
+            toggleMenu();
+            document.getElementById('members-modal').style.display = 'flex';
+        }
+        function closeMembersModal() { document.getElementById('members-modal').style.display = 'none'; }
+
+        function openRenameModal() {
+            toggleMenu();
+            document.getElementById('rename-modal').style.display = 'flex';
+        }
+        function closeRenameModal() { document.getElementById('rename-modal').style.display = 'none'; }
+
+        function updateGroupName() {
+            const newName = document.getElementById('new-group-name-input').value.trim();
+            if (newName) {
+                socket.emit('change-group-name', newName);
+                closeRenameModal();
             }
         }
 
-        function setReply(sender, text) {
-            replyToMsg = { sender, text };
-            document.getElementById('replySender').innerText = sender;
-            document.getElementById('replyText').innerText = text;
-            document.getElementById('replyPreview').classList.remove('hidden');
-            document.getElementById('messageInput').focus();
+        function openMediaModal(src) {
+            document.getElementById('modal-img-tag').src = src;
+            document.getElementById('media-modal').style.display = 'flex';
         }
+        function closeMediaModal() { document.getElementById('media-modal').style.display = 'none'; }
 
-        function cancelReply() {
-            replyToMsg = null;
-            document.getElementById('replyPreview').classList.add('hidden');
-        }
-
-        function autoResizeTextarea(el) {
-            el.style.height = 'auto';
-            el.style.height = (el.scrollHeight) + 'px';
-        }
-
-        function toggleThreeDotMenu() { document.getElementById('threeDotDropdown').classList.toggle('hidden'); }
-        function toggleSearchBox() { document.getElementById('searchBarContainer').classList.toggle('hidden'); }
-        function searchMessages(query) {
-            const q = query.toLowerCase();
-            document.querySelectorAll('.msg-bubble').forEach(b => {
-                b.style.display = (b.innerText.toLowerCase().includes(q) || q === '') ? 'block' : 'none';
-            });
-        }
-        function clearChatForMe() { if(confirm("स्क्रीन साफ करें?")) document.getElementById('messagesContainer').innerHTML = ''; }
-        function editGroupName() {
-            const name = prompt("ग्रुप का नया नाम लिखें:", groupName);
-            if(name) { groupName = name; document.getElementById('groupTitle').innerText = groupName; socket.emit('update_group_name', groupName); }
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
     </script>
 </body>
-                                                                                          </html>
+</html>
