@@ -1,112 +1,68 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const mongoose = require('mongoose');
 const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
 
-// Render पर एनवायरनमेंट वेरिएबल से कनेक्शन लेगा
-const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://maxdeepakgaming221_db_user:ADJERNHMEIKETPR@chatuuuu.hwr0ief.mongodb.net/';
-
-mongoose.connect(MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-}).then(() => console.log("✅ MongoDB से सफलतापूर्वक कनेक्ट हो गया!"))
-  .catch(err => console.error("❌ MongoDB कनेक्शन एरर:", err));
-
-// Database Schema with 24-Hour Auto-Delete & Reactions
-const messageSchema = new mongoose.Schema({
-    groupName: { type: String, default: 'Hello dosto 😊🙂' },
-    sender: String,
-    type: String, // 'text' or 'media'
-    text: String,
-    mediaUrl: String,
-    fileName: String,
-    fileType: String,
-    replyTo: Object,
-    readBy: [{ reader: String, time: String }],
-    reactions: [{ user: String, emoji: String }],
-    createdAt: { type: Date, default: Date.now, expires: 86400 } // ⏳ ठीक 24 घंटे में ऑटो-डिलीट
+// 250MB Buffer size taaki 200MB+ ki original video/files bina error ke ja sakein
+const io = new Server(server, {
+    maxHttpBufferSize: 250 * 1024 * 1024 
 });
 
-const Message = mongoose.model('Message', messageSchema);
-
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json({ limit: '50mb' }));
+
+let groupName = "🌸Hello Dosto😊🙂";
+let connectedUsers = {};
+let messagesHistory = []; // Server side memory for history
 
 io.on('connection', (socket) => {
-    console.log('🟢 नया यूजर जुड़ा:', socket.id);
-
-    Message.find().sort({ createdAt: 1 }).limit(100).then(messages => {
-        socket.emit('load_history', messages);
+    socket.on('join-chat', (name) => {
+        socket.username = name;
+        connectedUsers[socket.id] = name;
+        
+        // Send existing group name, users, and history to new/refreshed user
+        socket.emit('update-group-name', groupName);
+        socket.emit('load-history', messagesHistory);
+        io.emit('update-users-list', Object.values(connectedUsers));
     });
 
-    socket.on('send_message', async (data) => {
-        try {
-            const newMessage = new Message({
-                groupName: data.groupName || 'Hello dosto 😊🙂',
-                sender: data.sender,
-                type: data.type,
-                text: data.text,
-                mediaUrl: data.mediaUrl,
-                fileName: data.fileName,
-                fileType: data.fileType,
-                replyTo: data.replyTo,
-                readBy: []
-            });
-            await newMessage.save();
-            io.emit('receive_message', newMessage);
-        } catch (err) {
-            console.error("मैसेज सेव करने में त्रुटि:", err);
+    socket.on('chat-message', (data) => {
+        messagesHistory.push(data);
+        if (messagesHistory.length > 200) messagesHistory.shift(); // Keep last 200 messages
+        io.emit('chat-message', data);
+    });
+
+    socket.on('add-reaction', ({ messageId, reaction, name }) => {
+        const msg = messagesHistory.find(m => m.id === messageId);
+        if (msg) {
+            if (!msg.reactions) msg.reactions = {};
+            msg.reactions[name] = reaction;
+            io.emit('update-reaction', { messageId, reactions: msg.reactions });
         }
     });
 
-    socket.on('mark_read', async ({ msgId, reader }) => {
-        try {
-            const msg = await Message.findById(msgId);
-            if (msg && !msg.readBy.some(r => r.reader === reader)) {
-                const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                msg.readBy.push({ reader, time: timeStr });
-                await msg.save();
-                io.emit('update_read_receipt', { msgId, readBy: msg.readBy });
-            }
-        } catch (err) {
-            console.error("Read receipt error:", err);
-        }
+    socket.on('change-group-name', (name) => {
+        groupName = name;
+        io.emit('update-group-name', groupName);
     });
 
-    socket.on('add_reaction', async ({ msgId, user, emoji }) => {
-        try {
-            const msg = await Message.findById(msgId);
-            if (msg) {
-                msg.reactions = msg.reactions.filter(r => r.user !== user);
-                msg.reactions.push({ user, emoji });
-                await msg.save();
-                io.emit('update_reactions', { msgId, reactions: msg.reactions });
-            }
-        } catch (err) {
-            console.error("Reaction error:", err);
-        }
+    socket.on('typing', (name) => {
+        socket.broadcast.emit('typing', name);
     });
 
-    socket.on('delete_message', async (msgId) => {
-        try {
-            await Message.findByIdAndDelete(msgId);
-            io.emit('message_deleted', msgId);
-        } catch (err) {
-            console.error("Delete error:", err);
-        }
+    socket.on('stop-typing', () => {
+        socket.broadcast.emit('stop-typing');
     });
 
-    socket.on('update_group_name', (name) => {
-        io.emit('group_name_updated', name);
+    socket.on('disconnect', () => {
+        delete connectedUsers[socket.id];
+        io.emit('update-users-list', Object.values(connectedUsers));
     });
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`🚀 सर्वर पोर्ट ${PORT} पर चल रहा है!`);
+    console.log(`Server is running on port ${PORT}`);
 });
